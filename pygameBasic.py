@@ -2,51 +2,45 @@ from superwires import games, color
 import random
 
 
-class Pizza(games.Sprite):
-    # image = games.load_image("pizzaSprite.bmp")
-    speed = 1
-    
-    def __init__(self, x, y = 90):
-        self.image = games.load_image("pizzaSprite.bmp")
-        super(Pizza, self).__init__(image = self.image,
-                                        x = x, y = y,
-                                        dy = Pizza.speed)
+games.init(screen_width=1260, screen_height=599, fps=50)
 
-    def handle_collide(self):
-        self.x = random.randrange(games.screen.width)
-        self.y = random.randrange(games.screen.height)
-    
+
+class Pizza(games.Sprite):
+
+    images = games.load_image("pizzaSprite.bmp")
+    speed = 1
+
+    def __init__(self, x, y=90):
+        super(Pizza, self).__init__(
+            image=Pizza.images, x=x, y=y, dy=Pizza.speed)
+
     def update(self):
         if self.bottom > games.screen.height:
             self.end_game()
             self.destroy()
-    
+
     def handle_caught(self):
         self.destroy()
+        Pizza.speed += 0.5
 
     def end_game(self):
-        end_message = games.Message(value = "Game Over",
-                                        size = 90,
-                                        color = color.red,
-                                        x = games.screen.width/2,
-                                        y = games.screen.height/2,
-                                        lifetime = 5 * games.screen.fps,
-                                        after_death = games.screen.quit)
-        games.screen.add(end_message)
+        self.end_message = games.Message(
+            value="Game Over", size=300, color=color.red,
+            x=640, y=250, lifetime=250, after_death=games.screen.quit)
+        games.screen.add(self.end_message)
+
 
 class Pan(games.Sprite):
-    
+
+    images = games.load_image("bowl.png")
+
     def __init__(self):
-        self.image = games.load_image("bowl.png")
-        super(Pan, self).__init__(image = self.image,
-                                    x = games.mouse.x,
-                                    bottom = games.screen.height)
-        self.score = games.Text(value = 0, size = 25, 
-                                    color = color.purple,
-                                    top = 5, 
-                                    right = games.screen.width - 10)
+        super(Pan, self).__init__(image=Pan.images,
+                                  x=games.mouse.x, y=games.screen.height - 15)
+        self.score = games.Text(
+            value=0, size=60, color=color.black, x=1200, y=50)
         games.screen.add(self.score)
-    
+
     def update(self):
         self.x = games.mouse.x
         if self.left < 0:
@@ -59,65 +53,52 @@ class Pan(games.Sprite):
         for pizza in self.overlapping_sprites:
             self.score.value += 10
             self.score.right = games.screen.width - 10
-            pizza.handle_caught()   
+            pizza.handle_caught()
 
-    def check_collide(self):
-        for pizza in self.overlapping_sprites:
-            pizza.handle_collide()
 
 class Chef(games.Sprite):
-    
-    
-    def __init__(self, y = 55, speed = 2, odds_change = 200):
-        self.image = games.load_image("chef.png")  
-        super(Chef, self).__init__(image = self.image,
-                                   x = games.screen.width / 2,
-                                   y = y,
-                                   dx = speed)
+
+    images = games.load_image("chef.png")
+
+    def __init__(self, y=50, speed=2.5, odds_change=799):
+        super(Chef, self).__init__(image=Chef.images,
+                                   x=games.screen.width / 2, y=y, dx=speed)
         self.odds_change = odds_change
         self.time_til_drop = 0
 
     def update(self):
-        if self.left < 0 or self.right > games.screen.width:
+        if self.x > games.screen.width or self.x < 0:
+            self.dx = -self.dx
+        elif random.randrange(self.odds_change) == 350:
             self.dx = -self.dx
         elif random.randrange(self.odds_change) == 0:
-            self.dx = -self.dx
-            self.check_drop()
+            self.dx += 3
+
+        self.check_drop()
 
     def check_drop(self):
         if self.time_til_drop > 0:
             self.time_til_drop -= 1
         else:
-            new_pizza = Pizza(x = self.x)
-            games.screen.add(new_pizza)
-        
-        self.time_til_drop = int(new_pizza.height * 1.3 / Pizza.speed) + 1
+            self.new_pizza = Pizza(x=self.x)
+            games.screen.add(self.new_pizza)
+            self.time_til_drop = int(
+                self.new_pizza.height * 2 / Pizza.speed) + 1
 
 
+wall_image = games.load_image("wall.png", transparent=False)
+games.screen.background = wall_image
 
-def main():
-    games.init(screen_width = 640, screen_height = 420,fps=20)
-    wall_image = games.load_image("wall.png", transparent = False)
-    games.screen.background = wall_image
-        
-    start_message = games.Message(value = "Game will start",
-                                        size = 100,
-                                        color = color.red,
-                                        x = games.screen.width/2,
-                                        y = games.screen.height/2,
-                                        lifetime = 20,
-                                        )
-    games.screen.add(start_message)
+the_chef = Chef()
+games.screen.add(the_chef)
+
+the_pan = Pan()
+
+games.screen.add(the_pan)
+
+games.mouse.is_visible = False
 
 
-    the_chef = Chef()
-    games.screen.add(the_chef)
-    the_pan = Pan()
-    games.screen.add(the_pan)
-    games.mouse.is_visible = False
-    games.screen.event_grab = True
-    games.screen.mainloop()
-     
+games.screen.event_grab = True
 
-
-main() 
+games.screen.mainloop()
